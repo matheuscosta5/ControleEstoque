@@ -1,11 +1,23 @@
 import customtkinter as ctk
 from datetime import datetime
+from Conexao import Conexao
 
 class ChatbotIAJanela(ctk.CTkToplevel):
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Chatbot IA - Controle de Estoque")
         self.geometry("600x500")
+
+        # Conexão com o banco de dados SQLite
+        self.db = Conexao()  # Instancia a conexão
+
+        # Exemplo de dados de estoque
+        self.produtos = [
+            {"nome": "Mouse Gamer", "quantidade": 50, "fornecedor": "TechDistrib", "ultima_entrada": "27/05/2025 15:47"},
+            {"nome": "Teclado Mecânico RGB", "quantidade": 30, "fornecedor": "InfoParts", "ultima_entrada": "25/05/2025 10:20"},
+            {"nome": "Monitor 24\"", "quantidade": 20, "fornecedor": "FastEletrônicos", "ultima_entrada": "20/05/2025 09:00"},
+        ]
+        self.fornecedores = ["TechDistrib", "InfoParts", "FastEletrônicos"]
 
         self.mensagem_inicial = (
             "Olá! Eu sou o assistente inteligente do sistema de controle de estoque.\n"
@@ -46,14 +58,44 @@ class ChatbotIAJanela(ctk.CTkToplevel):
         pergunta = pergunta.lower()
 
         if "quantos produtos" in pergunta or "total de produtos" in pergunta:
-            return "Temos atualmente 358 produtos em estoque."
+            produtos = self.db.buscar_produtos()
+            total = sum(prod["QuantidadeEstoque"] for prod in produtos)
+            return f"Temos atualmente {total} produtos em estoque."
         elif "última entrada" in pergunta:
-            return "A última entrada foi em 27/05/2025 às 15:47 para o produto 'Mouse Gamer'."
+            estoque = self.db.buscar_estoque()
+            entradas = [e for e in estoque if e["TipoMovimentacao"] == "ENTRADA"]
+            if entradas:
+                ultima = max(entradas, key=lambda x: x["DataMovimentacao"])
+                # Buscar nome do produto
+                produtos = self.db.buscar_produtos()
+                prod_nome = next((p["Nome"] for p in produtos if p["Id"] == ultima["ProdutoId"]), "Desconhecido")
+                return f"A última entrada foi em {ultima['DataMovimentacao']} para o produto '{prod_nome}'."
+            else:
+                return "Nenhuma entrada encontrada."
         elif "fornecedores" in pergunta:
-            return "Temos 5 fornecedores cadastrados: TechDistrib, InfoParts, FastEletrônicos, etc."
+            fornecedores = self.db.buscar_fornecedores()
+            nomes = [f["RazaoSocial"] for f in fornecedores]
+            return f"Temos {len(nomes)} fornecedores cadastrados: {', '.join(nomes)}."
         elif "mais saídas" in pergunta:
-            return "O produto com mais saídas este mês foi o 'Teclado Mecânico RGB'."
+            estoque = self.db.buscar_estoque()
+            saidas = [e for e in estoque if e["TipoMovimentacao"] == "SAIDA"]
+            if saidas:
+                # Conta saídas por produto
+                from collections import Counter
+                contagem = Counter(e["ProdutoId"] for e in saidas)
+                mais_vendido_id = contagem.most_common(1)[0][0]
+                produtos = self.db.buscar_produtos()
+                prod_nome = next((p["Nome"] for p in produtos if p["Id"] == mais_vendido_id), "Desconhecido")
+                return f"O produto com mais saídas este mês foi o '{prod_nome}'."
+            else:
+                return "Nenhuma saída registrada."
         elif "hora" in pergunta:
             return f"Agora são {datetime.now().strftime('%H:%M:%S')}."
+        elif "quantidade do produto" in pergunta:
+            produtos = self.db.buscar_produtos()
+            for prod in produtos:
+                if prod["Nome"].lower() in pergunta:
+                    return f"O produto '{prod['Nome']}' tem {prod['QuantidadeEstoque']} unidades em estoque."
+            return "Não encontrei esse produto no estoque."
         else:
             return "Desculpe, ainda estou aprendendo. Tente perguntar algo sobre estoque, entradas ou saídas."
