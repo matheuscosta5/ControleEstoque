@@ -1,203 +1,296 @@
 import customtkinter as ctk
 from tkinter import messagebox
-import mysql.connector
+from tkinter import ttk
+from Conexao import Conexao
 
 class EstoqueForm(ctk.CTkToplevel):
     def __init__(self, master=None):
         super().__init__(master)
-        self.title("Controle de Estoque")
-        self.geometry("700x630")
+        self.title("Cadastro de Estoque")
+        self.geometry("1050x750")
         self.grab_set()
+        self.db = Conexao()
 
-        self.label_title = ctk.CTkLabel(self, text="Estoque", font=("Arial", 20))
+        self.label_title = ctk.CTkLabel(self, text="Movimentação de Estoque", font=("Arial", 20))
         self.label_title.pack(pady=10)
 
-        # ID
-        self.label_id = ctk.CTkLabel(self, text="ID:")
+        # Frame horizontal principal
+        main_row = ctk.CTkFrame(self)
+        main_row.pack(pady=5, fill="both", expand=True)
+
+        # Coluna de campos (à esquerda)
+        campos_col = ctk.CTkFrame(main_row)
+        campos_col.pack(side="left", fill="y", expand=True, padx=(0, 10))
+
+        # Campo ID para busca/atualização
+        self.label_id = ctk.CTkLabel(campos_col, text="ID da Movimentação (para buscar/atualizar):")
         self.label_id.pack()
-        self.entry_id = ctk.CTkEntry(self)
+        self.entry_id = ctk.CTkEntry(campos_col)
         self.entry_id.pack()
 
-        # Tipo Movimentação
-        self.label_tipo = ctk.CTkLabel(self, text="Tipo Movimentação:")
+        # Tipo de Movimentação
+        self.label_tipo = ctk.CTkLabel(campos_col, text="Tipo de Movimentação:")
         self.label_tipo.pack()
-        self.entry_tipo = ctk.CTkEntry(self)
-        self.entry_tipo.pack()
+        self.combo_tipo = ctk.CTkComboBox(campos_col, values=["ENTRADA", "SAIDA"])
+        self.combo_tipo.pack()
 
         # Quantidade
-        self.label_quantidade = ctk.CTkLabel(self, text="Quantidade:")
+        self.label_quantidade = ctk.CTkLabel(campos_col, text="Quantidade:")
         self.label_quantidade.pack()
-        self.entry_quantidade = ctk.CTkEntry(self)
+        self.entry_quantidade = ctk.CTkEntry(campos_col)
         self.entry_quantidade.pack()
 
-        # Data Movimentação
-        self.label_data = ctk.CTkLabel(self, text="Data Movimentação:")
-        self.label_data.pack()
-        self.entry_data = ctk.CTkEntry(self)
-        self.entry_data.pack()
-
-        # Ativo
-        self.label_ativo = ctk.CTkLabel(self, text="Ativo (1 ou 0):")
-        self.label_ativo.pack()
-        self.entry_ativo = ctk.CTkEntry(self)
-        self.entry_ativo.pack()
-
-        # Observação
-        self.label_obs = ctk.CTkLabel(self, text="Observação:")
-        self.label_obs.pack()
-        self.entry_obs = ctk.CTkEntry(self)
-        self.entry_obs.pack()
-
-        # Cliente ID
-        self.label_cliente = ctk.CTkLabel(self, text="Cliente ID:")
-        self.label_cliente.pack()
-        self.entry_cliente = ctk.CTkEntry(self)
-        self.entry_cliente.pack()
+        # Produto ID
+        self.label_produto_id = ctk.CTkLabel(campos_col, text="Produto ID:")
+        self.label_produto_id.pack()
+        self.entry_produto_id = ctk.CTkEntry(campos_col)
+        self.entry_produto_id.pack()
 
         # Fornecedor ID
-        self.label_fornecedor = ctk.CTkLabel(self, text="Fornecedor ID:")
-        self.label_fornecedor.pack()
-        self.entry_fornecedor = ctk.CTkEntry(self)
-        self.entry_fornecedor.pack()
+        self.label_fornecedor_id = ctk.CTkLabel(campos_col, text="Fornecedor ID:")
+        self.label_fornecedor_id.pack()
+        self.entry_fornecedor_id = ctk.CTkEntry(campos_col)
+        self.entry_fornecedor_id.pack()
 
-        # Produto ID
-        self.label_produto = ctk.CTkLabel(self, text="Produto ID:")
-        self.label_produto.pack()
-        self.entry_produto = ctk.CTkEntry(self)
-        self.entry_produto.pack()
+        # Cliente ID
+        self.label_cliente_id = ctk.CTkLabel(campos_col, text="Cliente ID:")
+        self.label_cliente_id.pack()
+        self.entry_cliente_id = ctk.CTkEntry(campos_col)
+        self.entry_cliente_id.pack()
+
+        # Observação
+        self.label_obs = ctk.CTkLabel(campos_col, text="Observação:")
+        self.label_obs.pack()
+        self.entry_obs = ctk.CTkEntry(campos_col)
+        self.entry_obs.pack()
 
         # Botões
-        self.btn_frame = ctk.CTkFrame(self)
+        self.btn_frame = ctk.CTkFrame(campos_col)
         self.btn_frame.pack(pady=15)
 
         self.btn_salvar = ctk.CTkButton(self.btn_frame, text="Salvar", command=self.salvar)
-        self.btn_salvar.grid(row=0, column=0, padx=5)
+        self.btn_salvar.grid(row=0, column=0, padx=10)
+
+        self.btn_atualizar = ctk.CTkButton(self.btn_frame, text="Atualizar", command=self.atualizar)
+        self.btn_atualizar.grid(row=0, column=1, padx=10)
 
         self.btn_buscar = ctk.CTkButton(self.btn_frame, text="Buscar", command=self.buscar)
-        self.btn_buscar.grid(row=0, column=1, padx=5)
-
-        self.btn_deletar = ctk.CTkButton(self.btn_frame, text="Deletar", command=self.deletar)
-        self.btn_deletar.grid(row=0, column=2, padx=5)
+        self.btn_buscar.grid(row=0, column=2, padx=10)
 
         self.btn_limpar = ctk.CTkButton(self.btn_frame, text="Limpar", command=self.limpar)
-        self.btn_limpar.grid(row=0, column=3, padx=5)
+        self.btn_limpar.grid(row=0, column=3, padx=10)
 
-    def conectar_bd(self):
-        return mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="controleestoque"
-        )
+        # Coluna das tabelas auxiliares (à direita)
+        tabelas_col = ctk.CTkFrame(main_row)
+        tabelas_col.pack(side="left", fill="both", expand=True)
+
+        # Tabela de Produtos (primeira)
+        self.label_tabela_produtos = ctk.CTkLabel(tabelas_col, text="Produtos", font=("Arial", 14, "bold"))
+        self.label_tabela_produtos.pack(pady=(0, 2))
+        self.tree_produtos = ttk.Treeview(tabelas_col, columns=("Id", "Nome"), show="headings", height=5)
+        self.tree_produtos.heading("Id", text="ID")
+        self.tree_produtos.heading("Nome", text="Nome")
+        self.tree_produtos.column("Id", width=40, anchor="center")
+        self.tree_produtos.column("Nome", width=120)
+        self.tree_produtos.pack(padx=5, pady=5, fill="x")
+        self.atualizar_tabela_produtos()
+
+        # Tabela de Fornecedores (segunda)
+        self.label_tabela_fornecedores = ctk.CTkLabel(tabelas_col, text="Fornecedores", font=("Arial", 14, "bold"))
+        self.label_tabela_fornecedores.pack(pady=(10, 2))
+        self.tree_fornecedores = ttk.Treeview(tabelas_col, columns=("Id", "RazaoSocial"), show="headings", height=5)
+        self.tree_fornecedores.heading("Id", text="ID")
+        self.tree_fornecedores.heading("RazaoSocial", text="Nome")
+        self.tree_fornecedores.column("Id", width=40, anchor="center")
+        self.tree_fornecedores.column("RazaoSocial", width=120)
+        self.tree_fornecedores.pack(padx=5, pady=5, fill="x")
+        self.atualizar_tabela_fornecedores()
+
+        # Tabela de Clientes (terceira)
+        self.label_tabela_clientes = ctk.CTkLabel(tabelas_col, text="Clientes", font=("Arial", 14, "bold"))
+        self.label_tabela_clientes.pack(pady=(10, 2))
+        self.tree_clientes = ttk.Treeview(tabelas_col, columns=("Id", "Nome"), show="headings", height=5)
+        self.tree_clientes.heading("Id", text="ID")
+        self.tree_clientes.heading("Nome", text="Nome")
+        self.tree_clientes.column("Id", width=40, anchor="center")
+        self.tree_clientes.column("Nome", width=120)
+        self.tree_clientes.pack(padx=5, pady=5, fill="x")
+        self.atualizar_tabela_clientes()
+
+        # Título da tabela de estoque
+        self.label_tabela_estoque = ctk.CTkLabel(self, text="Movimentações de Estoque", font=("Arial", 14, "bold"))
+        self.label_tabela_estoque.pack(pady=(10, 2))
+
+        # Tabela de Estoque
+        self.tree_estoque = ttk.Treeview(self, columns=("Id", "TipoMovimentacao", "Quantidade", "ProdutoId", "FornecedorId", "ClienteId", "Observacao"), show="headings")
+        self.tree_estoque.heading("Id", text="ID")
+        self.tree_estoque.heading("TipoMovimentacao", text="Tipo")
+        self.tree_estoque.heading("Quantidade", text="Quantidade")
+        self.tree_estoque.heading("ProdutoId", text="Produto ID")
+        self.tree_estoque.heading("FornecedorId", text="Fornecedor ID")
+        self.tree_estoque.heading("ClienteId", text="Cliente ID")
+        self.tree_estoque.heading("Observacao", text="Observação")
+        self.tree_estoque.pack(pady=10, fill="x")
+        self.atualizar_tabela_estoque()
+
+        # Vincula o evento de seleção da árvore de estoque
+        self.tree_estoque.bind("<Double-1>", self.on_tree_estoque_select)
+        self.tree_clientes.bind("<Double-1>", self.on_tree_cliente_select)
+        self.tree_fornecedores.bind("<Double-1>", self.on_tree_fornecedor_select)
+        self.tree_produtos.bind("<Double-1>", self.on_tree_produto_select)
+
+    def atualizar_tabela_estoque(self):
+        for row in self.tree_estoque.get_children():
+            self.tree_estoque.delete(row)
+        for mov in self.db.buscar_estoque():
+            self.tree_estoque.insert("", "end", values=(
+                mov["Id"], mov["TipoMovimentacao"], mov["Quantidade"], mov["ProdutoId"],
+                mov["FornecedorId"], mov["ClienteId"], mov["Observacao"]
+            ))
+
+    def atualizar_tabela_clientes(self):
+        for row in self.tree_clientes.get_children():
+            self.tree_clientes.delete(row)
+        for cliente in self.db.buscar_clientes():
+            self.tree_clientes.insert("", "end", values=(cliente["Id"], cliente["Nome"]))
+
+    def atualizar_tabela_fornecedores(self):
+        for row in self.tree_fornecedores.get_children():
+            self.tree_fornecedores.delete(row)
+        for fornecedor in self.db.buscar_fornecedores():
+            self.tree_fornecedores.insert("", "end", values=(fornecedor["Id"], fornecedor["RazaoSocial"]))
+
+    def atualizar_tabela_produtos(self):
+        for row in self.tree_produtos.get_children():
+            self.tree_produtos.delete(row)
+        for produto in self.db.buscar_produtos():
+            self.tree_produtos.insert("", "end", values=(produto["Id"], produto["Nome"]))
 
     def salvar(self):
-        dados = {
-            "id": self.entry_id.get().strip(),
-            "tipo": self.entry_tipo.get().strip(),
-            "quantidade": self.entry_quantidade.get().strip(),
-            "data": self.entry_data.get().strip(),
-            "ativo": self.entry_ativo.get().strip(),
-            "obs": self.entry_obs.get().strip(),
-            "cliente": self.entry_cliente.get().strip(),
-            "fornecedor": self.entry_fornecedor.get().strip(),
-            "produto": self.entry_produto.get().strip()
-        }
+        tipo = self.combo_tipo.get()
+        quantidade = self.entry_quantidade.get().strip()
+        produto_id = self.entry_produto_id.get().strip()
+        fornecedor_id = self.entry_fornecedor_id.get().strip()
+        cliente_id = self.entry_cliente_id.get().strip()
+        observacao = self.entry_obs.get().strip()
 
-        if not dados["quantidade"] or not dados["produto"]:
-            messagebox.showwarning("Atenção", "Produto ID e Quantidade são obrigatórios!")
+        if not tipo or not quantidade or not produto_id:
+            messagebox.showwarning("Atenção", "Tipo, Quantidade e Produto ID são obrigatórios!")
             return
 
         try:
-            conexao = self.conectar_bd()
-            cursor = conexao.cursor()
+            quantidade_int = int(quantidade)
+        except ValueError:
+            messagebox.showwarning("Atenção", "Quantidade deve ser um número inteiro!")
+            return
 
-            if dados["id"] == "":
-                sql = """INSERT INTO estoque 
-                         (TipoMovimentacao, Quantidade, DataMovimentacao, Ativo, Observacao, ClienteId, FornecedorId, ProdutoId) 
-                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
-                valores = (
-                    dados["tipo"], dados["quantidade"], dados["data"], dados["ativo"],
-                    dados["obs"], dados["cliente"], dados["fornecedor"], dados["produto"]
-                )
-                cursor.execute(sql, valores)
-                messagebox.showinfo("Sucesso", "Registro inserido com sucesso!")
-            else:
-                sql = """UPDATE estoque SET 
-                            TipoMovimentacao=%s, Quantidade=%s, DataMovimentacao=%s,
-                            Ativo=%s, Observacao=%s, ClienteId=%s, FornecedorId=%s, ProdutoId=%s 
-                         WHERE Id=%s"""
-                valores = (
-                    dados["tipo"], dados["quantidade"], dados["data"], dados["ativo"],
-                    dados["obs"], dados["cliente"], dados["fornecedor"], dados["produto"],
-                    dados["id"]
-                )
-                cursor.execute(sql, valores)
-                messagebox.showinfo("Sucesso", "Registro atualizado com sucesso!")
-
-            conexao.commit()
-            cursor.close()
-            conexao.close()
+        sucesso = self.db.inserir_estoque(tipo, quantidade_int, produto_id, fornecedor_id, cliente_id, observacao)
+        if sucesso:
+            messagebox.showinfo("Sucesso", "Movimentação inserida com sucesso!")
             self.limpar()
-        except mysql.connector.Error as err:
-            messagebox.showerror("Erro", f"Erro ao salvar: {err}")
+        else:
+            messagebox.showerror("Erro", "Erro ao inserir movimentação.")
+
+        self.atualizar_tabela_estoque()
 
     def buscar(self):
-        id_estoque = self.entry_id.get().strip()
+        id_mov = self.entry_id.get().strip()
+        if not id_mov:
+            messagebox.showwarning("Atenção", "Informe o ID da movimentação para buscar!")
+            return
 
-        if not id_estoque:
-            messagebox.showwarning("Atenção", "Informe o ID para buscar!")
+        movimentos = self.db.buscar_estoque(apenas_ativos=False)
+        mov = next((m for m in movimentos if str(m["Id"]) == id_mov), None)
+
+        if mov:
+            self.combo_tipo.set(mov["TipoMovimentacao"])
+            self.entry_quantidade.delete(0, ctk.END)
+            self.entry_quantidade.insert(0, mov["Quantidade"])
+            self.entry_produto_id.delete(0, ctk.END)
+            self.entry_produto_id.insert(0, mov["ProdutoId"])
+            self.entry_fornecedor_id.delete(0, ctk.END)
+            self.entry_fornecedor_id.insert(0, mov["FornecedorId"])
+            self.entry_cliente_id.delete(0, ctk.END)
+            self.entry_cliente_id.insert(0, mov["ClienteId"])
+            self.entry_obs.delete(0, ctk.END)
+            self.entry_obs.insert(0, mov["Observacao"])
+        else:
+            messagebox.showinfo("Buscar", "Movimentação não encontrada!")
+
+    def atualizar(self):
+        id_mov = self.entry_id.get().strip()
+        tipo = self.combo_tipo.get()
+        quantidade = self.entry_quantidade.get().strip()
+        produto_id = self.entry_produto_id.get().strip()
+        fornecedor_id = self.entry_fornecedor_id.get().strip()
+        cliente_id = self.entry_cliente_id.get().strip()
+        observacao = self.entry_obs.get().strip()
+
+        if not id_mov:
+            messagebox.showwarning("Atenção", "Informe o ID da movimentação para atualizar!")
+            return
+
+        if not tipo or not quantidade or not produto_id:
+            messagebox.showwarning("Atenção", "Tipo, Quantidade e Produto ID são obrigatórios!")
             return
 
         try:
-            conexao = self.conectar_bd()
-            cursor = conexao.cursor()
-            cursor.execute("SELECT * FROM estoque WHERE Id=%s", (id_estoque,))
-            resultado = cursor.fetchone()
-            cursor.close()
-            conexao.close()
-
-            if resultado:
-                campos = [
-                    self.entry_id, self.entry_tipo, self.entry_quantidade,
-                    self.entry_data, self.entry_ativo, self.entry_obs,
-                    self.entry_cliente, self.entry_fornecedor, self.entry_produto
-                ]
-                for i, campo in enumerate(campos):
-                    campo.delete(0, ctk.END)
-                    campo.insert(0, str(resultado[i]))
-            else:
-                messagebox.showinfo("Buscar", "Registro não encontrado.")
-        except mysql.connector.Error as err:
-            messagebox.showerror("Erro", f"Erro ao buscar: {err}")
-
-    def deletar(self):
-        id_estoque = self.entry_id.get().strip()
-
-        if not id_estoque:
-            messagebox.showwarning("Atenção", "Informe o ID para deletar!")
+            quantidade_int = int(quantidade)
+        except ValueError:
+            messagebox.showwarning("Atenção", "Quantidade deve ser um número inteiro!")
             return
 
-        confirm = messagebox.askyesno("Confirmação", "Deseja deletar este registro?")
-        if not confirm:
-            return
-
-        try:
-            conexao = self.conectar_bd()
-            cursor = conexao.cursor()
-            cursor.execute("DELETE FROM estoque WHERE Id=%s", (id_estoque,))
-            conexao.commit()
-            cursor.close()
-            conexao.close()
-            messagebox.showinfo("Sucesso", "Registro deletado com sucesso!")
+        sucesso = self.db.atualizar_estoque(id_mov, tipo, quantidade_int, produto_id, fornecedor_id, cliente_id, observacao)
+        if sucesso:
+            messagebox.showinfo("Sucesso", "Movimentação atualizada com sucesso!")
             self.limpar()
-        except mysql.connector.Error as err:
-            messagebox.showerror("Erro", f"Erro ao deletar: {err}")
+        else:
+            messagebox.showerror("Erro", "Erro ao atualizar movimentação.")
+
+        self.atualizar_tabela_estoque()
 
     def limpar(self):
-        entradas = [
-            self.entry_id, self.entry_tipo, self.entry_quantidade, self.entry_data,
-            self.entry_ativo, self.entry_obs, self.entry_cliente, self.entry_fornecedor,
-            self.entry_produto
-        ]
-        for entrada in entradas:
-            entrada.delete(0, ctk.END)
+        self.entry_id.delete(0, ctk.END)
+        self.combo_tipo.set("")
+        self.entry_quantidade.delete(0, ctk.END)
+        self.entry_produto_id.delete(0, ctk.END)
+        self.entry_fornecedor_id.delete(0, ctk.END)
+        self.entry_cliente_id.delete(0, ctk.END)
+        self.entry_obs.delete(0, ctk.END)
+        self.atualizar_tabela_estoque()
+
+    def on_tree_estoque_select(self, event):
+        item = self.tree_estoque.selection()[0]
+        valores = self.tree_estoque.item(item, "values")
+        # Preenche os campos com os valores da linha selecionada
+        self.entry_id.delete(0, ctk.END)
+        self.entry_id.insert(0, valores[0])
+        self.combo_tipo.set(valores[1])
+        self.entry_quantidade.delete(0, ctk.END)
+        self.entry_quantidade.insert(0, valores[2])
+        self.entry_produto_id.delete(0, ctk.END)
+        self.entry_produto_id.insert(0, valores[3])
+        self.entry_fornecedor_id.delete(0, ctk.END)
+        self.entry_fornecedor_id.insert(0, valores[4])
+        self.entry_cliente_id.delete(0, ctk.END)
+        self.entry_cliente_id.insert(0, valores[5])
+        self.entry_obs.delete(0, ctk.END)
+        self.entry_obs.insert(0, valores[6])
+
+    def on_tree_cliente_select(self, event):
+        item = self.tree_clientes.selection()[0]
+        valores = self.tree_clientes.item(item, "values")
+        self.entry_cliente_id.delete(0, ctk.END)
+        self.entry_cliente_id.insert(0, valores[0])
+
+    def on_tree_fornecedor_select(self, event):
+        item = self.tree_fornecedores.selection()[0]
+        valores = self.tree_fornecedores.item(item, "values")
+        self.entry_fornecedor_id.delete(0, ctk.END)
+        self.entry_fornecedor_id.insert(0, valores[0])
+
+    def on_tree_produto_select(self, event):
+        item = self.tree_produtos.selection()[0]
+        valores = self.tree_produtos.item(item, "values")
+        self.entry_produto_id.delete(0, ctk.END)
+        self.entry_produto_id.insert(0, valores[0])

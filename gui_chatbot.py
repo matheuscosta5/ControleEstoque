@@ -7,17 +7,7 @@ class ChatbotIAJanela(ctk.CTkToplevel):
         super().__init__(master)
         self.title("Chatbot IA - Controle de Estoque")
         self.geometry("600x500")
-
-        # Conexão com o banco de dados SQLite
         self.db = Conexao()  # Instancia a conexão
-
-        # Exemplo de dados de estoque
-        self.produtos = [
-            {"nome": "Mouse Gamer", "quantidade": 50, "fornecedor": "TechDistrib", "ultima_entrada": "27/05/2025 15:47"},
-            {"nome": "Teclado Mecânico RGB", "quantidade": 30, "fornecedor": "InfoParts", "ultima_entrada": "25/05/2025 10:20"},
-            {"nome": "Monitor 24\"", "quantidade": 20, "fornecedor": "FastEletrônicos", "ultima_entrada": "20/05/2025 09:00"},
-        ]
-        self.fornecedores = ["TechDistrib", "InfoParts", "FastEletrônicos"]
 
         self.mensagem_inicial = (
             "Olá! Eu sou o assistente inteligente do sistema de controle de estoque.\n"
